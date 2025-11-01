@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quran Web App</title>
+<link href="https://fonts.googleapis.com/css2?family=Scheherazade&display=swap" rel="stylesheet">
+<style>
+body, html { margin:0; padding:0; font-family:'Scheherazade', serif; direction:rtl; text-align:right; background:#0D1B2A; color:white;}
+.navbar { background: linear-gradient(90deg,#112D4E,#1B3A6D); display:flex; justify-content:space-between; align-items:center; padding:15px 30px; box-shadow:0 4px 12px rgba(0,0,0,0.5); position:sticky; top:0; z-index:1000;}
+.navbar h1 { font-size:1.8em; color:#FFD700; margin:0;}
+.navbar a { color:#FFD700; text-decoration:none; margin-left:20px; font-weight:bold; cursor:pointer;}
+.navbar a:hover { color:#FFC107; text-shadow:0 0 8px #FFD700;}
+section { display:none; padding:20px; max-width:900px; margin:20px auto; }
+section.active { display:block; }
+.container { background:#1B263B; border-radius:12px; padding:20px; box-shadow:0 0 20px rgba(0,0,0,0.6);}
+.controls { display:flex; flex-wrap:wrap; align-items:center; margin-bottom:20px; }
+label { margin-right:5px; font-weight:bold; }
+select { padding:10px 15px; margin:5px; border-radius:8px; border:none; cursor:pointer; font-size:1em; background:#112D4E; color:#FFD700; }
+select:hover { background:#1B3A6D; }
+#surahInfo { margin-bottom:15px; font-size:1.1em; color:#FFC107; }
+#ayahContainer { border:2px solid #FFD700; border-radius:12px; padding:20px; background-color:#0D1B2A; line-height:2.5em; text-align:right;}
+.ayah { display:inline; margin:0 8px 10px 0; font-size:2em; position:relative; color:white;}
+.verse-number { display:inline-block; width:30px; height:30px; line-height:30px; text-align:center; border-radius:50%; background:radial-gradient(circle at 30% 30%,#FFD700,#FFA500); color:#0D1B2A; font-weight:bold; font-size:0.9em; vertical-align:middle; margin-left:5px; border:2px solid #FFD700; box-shadow:0 0 5px rgba(255,215,0,0.8);}
+.bismillah { display:block; text-align:center; font-size:2em; margin-bottom:15px; color:#FFD700; font-weight:bold; }
+.about-content { font-size:1.2em; color:#FFD700; }
+</style>
+</head>
+<body>
+
+<div class="navbar">
+<h1>القرآن الكريم</h1>
+<div>
+<a onclick="showSection('home')">Home</a>
+<a onclick="showSection('about')">About Us</a>
+</div>
+</div>
+
+<!-- Home Section -->
+<section id="home" class="active">
+<div class="container">
+<div class="controls">
+<label for="surahSelect">Select Surah:</label>
+<select id="surahSelect"></select>
+</div>
+<div id="surahInfo"></div>
+<div id="ayahContainer">
+<!-- Bismillah will be added dynamically here -->
+</div>
+</div>
+</section>
+
+<!-- About Section -->
+<section id="about">
+<div class="container">
+<h2>About Us</h2>
+<div class="about-content">
+This Quran web app is created for reading the Quran.<br>
+Contact us at: <a href="mailto:abasith5736@gmail.com" style="color:#FFD700;">abasith5736@gmail.com</a>
+  <p>.This web app is made with help of oprn AI and this may contain mistake please for give us اسلام عليكم<p>
+</div>
+</div>
+</section>
+
+<script>
+// Section Navigation
+function showSection(sectionId){
+    document.querySelectorAll('section').forEach(sec => sec.classList.remove('active'));
+    document.getElementById(sectionId).classList.add('active');
+}
+
+// Elements
+const surahSelect = document.getElementById('surahSelect');
+const ayahContainer = document.getElementById('ayahContainer');
+const surahInfo = document.getElementById('surahInfo');
+
+const apiUrl = 'https://api.alquran.cloud/v1/surah';
+
+// Populate Surah list
+fetch(apiUrl)
+.then(res => res.json())
+.then(data => {
+    data.data.forEach(surah=>{
+        const option = document.createElement('option');
+        option.value = surah.number;
+        option.innerHTML = `<span style="font-family: 'Scheherazade', serif;">${surah.name}</span> (${surah.englishName})`;
+        surahSelect.appendChild(option);
+    });
+    loadSurah(surahSelect.value);
+});
+
+// Load Surah
+function loadSurah(number){
+    fetch(`${apiUrl}/${number}`)
+    .then(res=>res.json())
+    .then(data=>{
+        const surah = data.data;
+        surahInfo.innerHTML = `Revelation: <strong>${surah.revelationType}</strong> | Number of Ayahs: ${surah.numberOfAyahs}`;
+        ayahContainer.innerHTML = '';
+
+        // Add Bismillah
+        if(surah.number === 1){ // Surah Al-Faatiha
+            const bismillah = document.createElement('span');
+            bismillah.classList.add('ayah');
+            bismillah.innerHTML = 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ <span class="verse-number">1</span>';
+            ayahContainer.appendChild(bismillah);
+        } else if(surah.number !== 9){ // Surah At-Tawbah does not have Bismillah
+            const bismillah = document.createElement('div');
+            bismillah.classList.add('bismillah');
+            bismillah.innerText = 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ';
+            ayahContainer.appendChild(bismillah);
+        }
+
+        // Add Ayahs
+        surah.ayahs.forEach(ayah=>{
+            // Skip Bismillah in Faatiha since it's already added as Ayah 1
+            if(surah.number === 1 && ayah.numberInSurah === 1) return;
+
+            const span = document.createElement('span');
+            span.classList.add('ayah');
+            span.innerHTML = `${ayah.text} <span class="verse-number">${ayah.numberInSurah}</span>`;
+            ayahContainer.appendChild(span);
+        });
+    });
+}
+
+
+
+
+
+// Event Listener
+surahSelect.addEventListener('change', ()=>{ loadSurah(surahSelect.value); });
+
+</script>
+</body>
+</html>
+
